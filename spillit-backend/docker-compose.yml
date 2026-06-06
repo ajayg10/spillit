@@ -1,0 +1,42 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     spillit
+      POSTGRES_PASSWORD: spillitpass
+      POSTGRES_DB:       spillit
+    ports:
+      - "5432:5432"                           # Exposed for local dev; remove in production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spillit"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .                                  # Dockerfile is in spillit-backend/
+    restart: unless-stopped
+    environment:
+      PORT:            8080
+      DATABASE_URL:    postgres://spillit:spillitpass@postgres:5432/spillit?sslmode=disable
+      JWT_SECRET:      ${JWT_SECRET}
+      DAILY_SALT:      ${DAILY_SALT}
+      RATE_LIMIT_RPS:  20
+      ALLOWED_ORIGINS: http://localhost:5173
+    ports:
+      - "8080:8080"                           # API exposed for dev; in prod, Nginx proxies
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
