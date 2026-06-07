@@ -64,8 +64,7 @@ const INITIAL_POSTS = [
 
 const CATEGORIES = ['all', 'confession', 'college', 'relationships', 'career', 'random'];
 
-export default function HomeScreen() {
-  const [posts, setPosts] = useState(INITIAL_POSTS);
+export default function HomeScreen({ posts, setPosts, onAddPost }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostCategory, setNewPostCategory] = useState('confession');
@@ -111,6 +110,9 @@ export default function HomeScreen() {
     };
 
     setPosts([newPost, ...posts]);
+    if (onAddPost) {
+      onAddPost(newPost);
+    }
     setNewPostContent('');
     setShowSpillForm(false);
   };
