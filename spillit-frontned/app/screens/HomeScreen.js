@@ -76,18 +76,71 @@ export default function HomeScreen({ posts, setPosts, onAddPost }) {
     setPosts(prevPosts =>
       prevPosts.map(post => {
         if (post.id !== postId) return post;
-        
-        // Prevent voting multiple times in a real app, here we just toggle/increment
-        if (type === 'up') {
-          return { ...post, upvotes: post.upvotes + 1 };
-        } else if (type === 'down') {
-          return { ...post, downvotes: post.downvotes + 1 };
-        } else if (type === 'truth') {
-          return { ...post, real_votes: post.real_votes + 1 };
-        } else if (type === 'cap') {
-          return { ...post, cap_votes: post.cap_votes + 1 };
+
+        let newPost = { ...post };
+
+        if (type === 'up' || type === 'down') {
+          const currentVote = post.userVote; // 'up', 'down', or undefined/null
+          
+          if (type === 'up') {
+            if (currentVote === 'up') {
+              // Toggle off upvote
+              newPost.upvotes = Math.max(0, post.upvotes - 1);
+              newPost.userVote = null;
+            } else {
+              // If previously downvoted, remove downvote first
+              if (currentVote === 'down') {
+                newPost.downvotes = Math.max(0, post.downvotes - 1);
+              }
+              newPost.upvotes = post.upvotes + 1;
+              newPost.userVote = 'up';
+            }
+          } else if (type === 'down') {
+            if (currentVote === 'down') {
+              // Toggle off downvote
+              newPost.downvotes = Math.max(0, post.downvotes - 1);
+              newPost.userVote = null;
+            } else {
+              // If previously upvoted, remove upvote first
+              if (currentVote === 'up') {
+                newPost.upvotes = Math.max(0, post.upvotes - 1);
+              }
+              newPost.downvotes = post.downvotes + 1;
+              newPost.userVote = 'down';
+            }
+          }
+        } else if (type === 'truth' || type === 'cap') {
+          const currentVerdict = post.userVerdict; // 'truth', 'cap', or undefined/null
+
+          if (type === 'truth') {
+            if (currentVerdict === 'truth') {
+              // Toggle off truth
+              newPost.real_votes = Math.max(0, post.real_votes - 1);
+              newPost.userVerdict = null;
+            } else {
+              // If previously voted cap, remove cap first
+              if (currentVerdict === 'cap') {
+                newPost.cap_votes = Math.max(0, post.cap_votes - 1);
+              }
+              newPost.real_votes = post.real_votes + 1;
+              newPost.userVerdict = 'truth';
+            }
+          } else if (type === 'cap') {
+            if (currentVerdict === 'cap') {
+              // Toggle off cap
+              newPost.cap_votes = Math.max(0, post.cap_votes - 1);
+              newPost.userVerdict = null;
+            } else {
+              // If previously voted truth, remove truth first
+              if (currentVerdict === 'truth') {
+                newPost.real_votes = Math.max(0, post.real_votes - 1);
+              }
+              newPost.cap_votes = post.cap_votes + 1;
+              newPost.userVerdict = 'cap';
+            }
+          }
         }
-        return post;
+        return newPost;
       })
     );
   };
@@ -308,36 +361,81 @@ export default function HomeScreen({ posts, setPosts, onAddPost }) {
                   {/* Left side: Likes/Dislikes */}
                   <View style={styles.voteGroup}>
                     <TouchableOpacity 
-                      style={styles.actionButton}
+                      style={[
+                        styles.actionButton,
+                        item.userVote === 'up' && { backgroundColor: 'rgba(74, 222, 128, 0.15)' }
+                      ]}
                       onPress={() => handleVote(item.id, 'up')}
                     >
-                      <Ionicons name="triangle" size={16} color="#4ADE80" />
-                      <Text style={styles.voteCount}>{item.upvotes}</Text>
+                      <Ionicons 
+                        name="triangle" 
+                        size={16} 
+                        color={item.userVote === 'up' ? "#4ADE80" : "#71717A"} 
+                      />
+                      <Text style={[
+                        styles.voteCount,
+                        item.userVote === 'up' && { color: '#4ADE80' }
+                      ]}>
+                        {item.upvotes}
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
-                      style={styles.actionButton}
+                      style={[
+                        styles.actionButton,
+                        item.userVote === 'down' && { backgroundColor: 'rgba(248, 113, 113, 0.15)' }
+                      ]}
                       onPress={() => handleVote(item.id, 'down')}
                     >
-                      <Ionicons name="triangle" style={{ transform: [{ rotate: '180deg' }] }} size={16} color="#F87171" />
-                      <Text style={styles.voteCount}>{item.downvotes}</Text>
+                      <Ionicons 
+                        name="triangle" 
+                        style={{ transform: [{ rotate: '180deg' }] }} 
+                        size={16} 
+                        color={item.userVote === 'down' ? "#F87171" : "#71717A"} 
+                      />
+                      <Text style={[
+                        styles.voteCount,
+                        item.userVote === 'down' && { color: '#F87171' }
+                      ]}>
+                        {item.downvotes}
+                      </Text>
                     </TouchableOpacity>
                   </View>
 
                   {/* Right side: Truth vs Cap quick vote */}
                   <View style={styles.opinionGroup}>
                     <TouchableOpacity 
-                      style={[styles.opinionButton, styles.truthBtn]}
+                      style={[
+                        styles.opinionButton, 
+                        item.userVerdict === 'truth' 
+                          ? { backgroundColor: '#10B981' } 
+                          : styles.truthBtn
+                      ]}
                       onPress={() => handleVote(item.id, 'truth')}
                     >
-                      <Text style={styles.opinionText}>Truth ({item.real_votes})</Text>
+                      <Text style={[
+                        styles.opinionText,
+                        item.userVerdict !== 'truth' && { color: '#10B981' }
+                      ]}>
+                        Truth ({item.real_votes})
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
-                      style={[styles.opinionButton, styles.capBtn]}
+                      style={[
+                        styles.opinionButton, 
+                        item.userVerdict === 'cap' 
+                          ? { backgroundColor: '#EF4444' } 
+                          : styles.capBtn
+                      ]}
                       onPress={() => handleVote(item.id, 'cap')}
                     >
-                      <Text style={styles.opinionText}>Cap ({item.cap_votes})</Text>
+                      <Text style={[
+                        styles.opinionText,
+                        item.userVerdict !== 'cap' && { color: '#EF4444' }
+                      ]}>
+                        Cap ({item.cap_votes})
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
